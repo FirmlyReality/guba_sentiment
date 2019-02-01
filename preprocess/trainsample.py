@@ -7,6 +7,8 @@ stocks.loc['600005'] = '武钢股份'
 stocks.loc['000024'] = '招商地产'
 stocks.loc['000562'] = '宏源证券'
 stocks.loc['601299'] = '中国北车'
+stocks.loc['szzs'] = '上证指数'
+stocks.loc['399001'] = '深证成指'
 '''file = open("stocks_name.txt","w")
 for code in stocks.index:
     file.write(code+"\t"+stocks[code]+"\n")
@@ -44,7 +46,7 @@ if __name__ == "__main__":
             print("Error! code %s does not exist!"%code)
     exit(0)'''
     labeled_cnt = {"title":{},"content":{},"reply":{}}
-    old_samples = pd.read_csv("samples1.csv",dtype=str)
+    '''old_samples = pd.read_csv("samples1.csv",dtype=str)
     cnt = 0
     for i in old_samples.index:
         d = old_samples.loc[i]
@@ -54,7 +56,7 @@ if __name__ == "__main__":
         labeled_cnt[d['type']][code] += 1
         cnt += 1
     print(labeled_cnt)
-    print(cnt)
+    print(cnt)'''
     
 
     for dfile in files:
