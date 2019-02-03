@@ -6,7 +6,7 @@ import statsmodels.api as sm
 import math
 import statsmodels.tsa.stattools as tsa
 
-need_stocks = ['000063']
+need_stocks = ['000413']
 sumres_dir = "../../../data/sum_results"
 
 def compute_MsgBSI(tcnt, rcnt, tsum, rsum):

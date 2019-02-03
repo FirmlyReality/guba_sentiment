@@ -4,11 +4,11 @@ import os, sys, math
 from datetime import datetime, timedelta
 import time
 
-
-need_stocks = ['000063']
-origin_dir = "../../../data/filter_data1"
-results_dir = "../../../data/results"
-output_dir = "../../../data/sum_results"
+need_stocks = []
+data_dir = "../../../data"
+origin_dir = data_dir + "/filter_data1"
+results_dir = data_dir + "/results"
+output_dir = data_dir + "/sum_results"
 
 def get_time_data(data,stime,etime):
     sdata = filter_data(data,stime,etime)
@@ -30,7 +30,16 @@ def filter_data(data,stime,etime):
     return data
 
 if __name__ == "__main__":
-    for code in need_stocks:
+
+    print("Read from %s/need_stocks.txt and build need_stocks list" % data_dir)
+    need_stocks_file = open(data_dir+"/need_stocks.txt")
+    for line in need_stocks_file.read().splitlines():
+        lined = line.split(' ')
+        need_stocks.append(lined[0])
+    need_stocks.sort()
+    print(need_stocks)
+
+    for code in need_stocks[2:]:
         print("Read from %s..."%(code + "_tiezi.csv"))
         tiezidata = pd.read_csv(origin_dir+"/"+code + "_tiezi.csv",dtype=str)
         print("Read from %s..."%(code + "_reply.csv"))
@@ -78,8 +87,8 @@ if __name__ == "__main__":
         replydata['content_prob_3'] = [p[3] for p in content_prob]
         
         print("Group by time and write to file...")
-        start_date = datetime.strptime('2015-01-01 9:30:00',"%Y-%m-%d %H:%M:%S")
-        end_date = datetime.strptime('2018-10-01 9:30:00',"%Y-%m-%d %H:%M:%S")          
+        start_date = datetime.strptime('2015-01-01 09:30:00',"%Y-%m-%d %H:%M:%S")
+        end_date = datetime.strptime('2018-10-01 09:30:00',"%Y-%m-%d %H:%M:%S")
         
         stime = start_date
         etime = start_date+timedelta(hours=5,minutes=30)
