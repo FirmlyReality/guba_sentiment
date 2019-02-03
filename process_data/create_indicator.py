@@ -6,7 +6,7 @@ import statsmodels.api as sm
 import math
 import statsmodels.tsa.stattools as tsa
 
-need_stocks = ['000002']
+need_stocks = ['000063']
 sumres_dir = "../../../data/sum_results"
 
 def compute_MsgBSI(tcnt, rcnt, tsum, rsum):
@@ -19,7 +19,7 @@ def compute_MsgBSI(tcnt, rcnt, tsum, rsum):
         return 0
     else:
         BSI = (tsum[3]+rsum[3] - tsum[1]-rsum[1]) / fenmu
-        MsgBSI = math.log(sum(tcnt[1:]) + sum(rcnt[1:]) +1) * BSI
+        MsgBSI = BSI * math.log(sum(tcnt[1:]) + sum(rcnt[1:]) +1) 
         #print("MsgBSI: %s"%str(MsgBSI))
         return MsgBSI
         
