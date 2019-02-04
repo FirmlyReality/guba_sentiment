@@ -6,19 +6,21 @@ import statsmodels.api as sm
 import math
 import statsmodels.tsa.stattools as tsa
 
-need_stocks = ['000413']
+need_stocks = ['000002']
 sumres_dir = "../../../data/sum_results"
+tiezi_weight = 0.8
+reply_weight = 1 - tiezi_weight
 
 def compute_MsgBSI(tcnt, rcnt, tsum, rsum):
     '''print("tcnt: %s"%str(tcnt))
     print("rcnt: %s"%str(rcnt))
     print("tsum: %s"%str(tsum))
     print("rsum: %s"%str(rsum))'''
-    fenmu = sum(tsum[1:])+sum(rsum[1:])
+    fenmu = sum(tsum[1:])*tiezi_weight + sum(rsum[1:])*reply_weight
     if fenmu == 0:
         return 0
     else:
-        BSI = (tsum[3]+rsum[3] - tsum[1]-rsum[1]) / fenmu
+        BSI = ((tsum[3] - tsum[1])*tiezi_weight + (rsum[3]-rsum[1])*reply_weight) / fenmu
         MsgBSI = BSI * math.log(sum(tcnt[1:]) + sum(rcnt[1:]) +1) 
         #print("MsgBSI: %s"%str(MsgBSI))
         return MsgBSI
@@ -126,7 +128,10 @@ if __name__ == "__main__":
         fit_linear(today_returns,aftMsgBSI)
         
         print("Fit open_returns-preMsgBSI:")
-        fit_linear(open_returns,preMsgBSI)
+        fit_linear(open_returns,preMsgBSI)       
+        
+        print("Fit open_returns-allMsgBSI[-1]:")
+        fit_linear(open_returns,allMsgBSI[:-1])
         
         print("Fit close_returns-allMsgBSI:")
         fit_linear(close_returns,allMsgBSI[:-1])
