@@ -84,8 +84,9 @@ if __name__ == "__main__":
         need_stocks.append(lined[0])
     need_stocks.sort()
     print(need_stocks)
+    need_stocks.remove('600832')
 
-    for code in need_stocks:
+    for code in need_stocks[453:]:
         print("Read from %s..."%(code + "_tiezi.csv"))
         tiezidata = pd.read_csv(origin_dir+"/"+code + "_tiezi.csv",dtype=str)
         print("Read from %s..."%(code + "_reply.csv"))

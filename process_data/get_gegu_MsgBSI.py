@@ -53,7 +53,7 @@ if __name__ == "__main__":
     files = os.listdir(inputDir)
     files = sorted(files)
     
-    for file in files:
+    for file in files[453:]:
         code = file.split(".")[0]
         print("Process file: %s, stock_code:%s "%(file, code))
         
