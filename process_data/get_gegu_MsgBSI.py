@@ -19,12 +19,13 @@ def compute_MsgBSI(tcnt, rcnt, tsum, rsum):
     print("rsum: %s"%str(rsum))'''
     fenmu = sum(tsum[1:])*tiezi_weight + sum(rsum[1:])*reply_weight
     if fenmu == 0:
-        return 0
+        return 0,0
     else:
         BSI = ((tsum[3] - tsum[1])*tiezi_weight + (rsum[3]-rsum[1])*reply_weight) / fenmu
-        MsgBSI = BSI * math.log(sum(tcnt[1:]) + sum(rcnt[1:]) +1) 
+        MsgBSI = BSI * math.log(sum(tcnt[1:]) + sum(rcnt[1:]) +1)
+        ArgS = 1 - math.sqrt(1-BSI*BSI)
         #print("MsgBSI: %s"%str(MsgBSI))
-        return MsgBSI
+        return MsgBSI, ArgS
         
 def fit_linear(y,x):
     assert len(x) == len(y)
@@ -53,7 +54,7 @@ if __name__ == "__main__":
     files = os.listdir(inputDir)
     files = sorted(files)
     
-    for file in files[453:]:
+    for file in files:
         code = file.split(".")[0]
         print("Process file: %s, stock_code:%s "%(file, code))
         
@@ -62,7 +63,7 @@ if __name__ == "__main__":
         if len(stock_data) == 0:
             print("Code %s does not exist!!!" % code)
             stock_data = stocks300
-        stock_date = ['2015-01-01'] + list(stock_data.date)
+        stock_date = ['2015-01-01'] + list(stocks300.date) # ['2015-01-01'] + list(stock_data.date)
         #print(stock_date)
         #fig = plt.figure()
         #ax1 = fig.add_subplot(111)
@@ -77,6 +78,11 @@ if __name__ == "__main__":
         aftallMsgBSI = []
         preMsgBSI = []
         preallMsgBSI = []
+        preArgS = []
+        preallArgS = []
+        aftArgS = []
+        aftallArgS = []
+        intArgS = []
         for i in range(1,len(stock_date)):
             now_date = datetime.strptime(stock_date[i],"%Y-%m-%d")
             last_date = datetime.strptime(stock_date[i-1],"%Y-%m-%d")
@@ -116,19 +122,31 @@ if __name__ == "__main__":
                 pre_r_sum += beta_now * np.array([d['aft_r_'+str(i)+'_prob'] for i in range(4)])
                 
                 if date == last_date:
-                    preMsgBSI.append(compute_MsgBSI(pre_t_cnt, pre_r_cnt, pre_t_sum, pre_r_sum))
+                    predata = compute_MsgBSI(pre_t_cnt, pre_r_cnt, pre_t_sum, pre_r_sum)
+                    preMsgBSI.append(predata[0])
+                    preArgS.append(predata[1])
                 pre_t_cnt += beta_now * np.array([d['int_t_'+str(i)+'_cnt'] for i in range(4)])
                 pre_r_cnt += beta_now * np.array([d['int_r_'+str(i)+'_cnt'] for i in range(4)])
                 pre_t_sum += beta_now * np.array([d['int_t_'+str(i)+'_prob'] for i in range(4)])
                 pre_r_sum += beta_now * np.array([d['int_r_'+str(i)+'_prob'] for i in range(4)])
                            
                 beta_now *= Beta
-                
-            aftMsgBSI.append(compute_MsgBSI(aft_t_cnt, aft_r_cnt, aft_t_sum, aft_r_sum))
-            intMsgBSI.append(compute_MsgBSI(int_t_cnt, int_r_cnt, int_t_sum, int_r_sum))
-            aftallMsgBSI.append(compute_MsgBSI(aftall_t_cnt, aftall_r_cnt, aftall_t_sum, aftall_r_sum))          
-            preallMsgBSI.append(compute_MsgBSI(pre_t_cnt, pre_r_cnt, pre_t_sum, pre_r_sum))
             
+           
+            aftdata = compute_MsgBSI(aft_t_cnt, aft_r_cnt, aft_t_sum, aft_r_sum)
+            intdata = compute_MsgBSI(int_t_cnt, int_r_cnt, int_t_sum, int_r_sum)
+            aftalldata = compute_MsgBSI(aftall_t_cnt, aftall_r_cnt, aftall_t_sum, aftall_r_sum)        
+            prealldata = compute_MsgBSI(pre_t_cnt, pre_r_cnt, pre_t_sum, pre_r_sum)
+            
+            aftMsgBSI.append(aftdata[0])
+            aftArgS.append(aftdata[1])
+            intMsgBSI.append(intdata[0])
+            intArgS.append(intdata[1])
+            aftallMsgBSI.append(aftalldata[0])
+            aftallArgS.append(aftalldata[1])
+            preallMsgBSI.append(prealldata[0])
+            preallArgS.append(prealldata[1])
+       
         MsgBSI_data = pd.DataFrame()
         MsgBSI_data['date'] = stock_date[1:]
         MsgBSI_data['preMsgBSI'] = preMsgBSI
@@ -136,9 +154,14 @@ if __name__ == "__main__":
         MsgBSI_data['aftMsgBSI'] = aftMsgBSI
         MsgBSI_data['preallMsgBSI'] = preallMsgBSI
         MsgBSI_data['aftallMsgBSI'] = aftallMsgBSI
+        MsgBSI_data['preArgS'] = preArgS
+        MsgBSI_data['intArgS'] = intArgS
+        MsgBSI_data['aftArgS'] = aftArgS
+        MsgBSI_data['preallArgS'] = preallArgS
+        MsgBSI_data['aftallArgS'] = aftallArgS
         MsgBSI_data.to_csv(os.path.join(outputDir,file),index=False)
         
-        stock_open = list(stock_data.open)
+        '''stock_open = list(stock_data.open)
         stock_close = list(stock_data.close)
         
         close_returns = []
@@ -213,4 +236,4 @@ if __name__ == "__main__":
         fit_linear(close_returns,intMsgBSI[1:])
         
         print("Fit close_returns-aftMsgBSI:")
-        fit_linear(close_returns,aftMsgBSI[1:])
+        fit_linear(close_returns,aftMsgBSI[1:])'''
