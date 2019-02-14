@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 #sumres_dir = "../../../data/sum_results"
 tiezi_weight = 0.8
 reply_weight = 1 - tiezi_weight
+Fama_French_File = "STK_MKT_ThrfacDay.csv"
+returns_dir = "../../../data/stock_returns"
 
 def compute_MsgBSI(tcnt, rcnt, tsum, rsum):
     '''print("tcnt: %s"%str(tcnt))
@@ -25,16 +27,24 @@ def compute_MsgBSI(tcnt, rcnt, tsum, rsum):
         MsgBSI = BSI * math.log(sum(tcnt[1:]) + sum(rcnt[1:]) +1)
         ArgS = 1 - math.sqrt(1-BSI*BSI)
         #print("MsgBSI: %s"%str(MsgBSI))
+        #print(tsum)
+        #print(rsum)
+        #print(ArgS)
         return MsgBSI, ArgS
         
-def fit_linear(y,x):
-    assert len(x) == len(y)
-    x = np.array(x)
+def fit_linear(y,*X):
+    Xs = []
+    for x in X:
+        assert len(x) == len(y)
+        Xs.append(np.array(x))
+    #print(Xs)
+    x = np.array(Xs).T
+    #print(x)
     y = np.array(y)
     X = sm.add_constant(np.array(x))
     mod = sm.OLS(y,X)
     res = mod.fit()
-    print(res.summary())    
+    print(res.summary())  
     
 if __name__ == "__main__":
 
@@ -59,11 +69,12 @@ if __name__ == "__main__":
         print("Process file: %s, stock_code:%s "%(file, code))
         
         stock_data = ts.get_k_data(code=code, start='2015-01-01', end='2018-10-01')
+        stock_data.to_csv(returns_dir+"/"+code+".csv")
         #print(stock_data)
         if len(stock_data) == 0:
             print("Code %s does not exist!!!" % code)
             stock_data = stocks300
-        stock_date = ['2015-01-01'] + list(stocks300.date) # ['2015-01-01'] + list(stock_data.date)
+        stock_date = ['2015-01-01'] + list(stock_data.date)
         #print(stock_date)
         #fig = plt.figure()
         #ax1 = fig.add_subplot(111)
@@ -161,7 +172,7 @@ if __name__ == "__main__":
         MsgBSI_data['aftallArgS'] = aftallArgS
         MsgBSI_data.to_csv(os.path.join(outputDir,file),index=False)
         
-        '''stock_open = list(stock_data.open)
+        stock_open = list(stock_data.open)
         stock_close = list(stock_data.close)
         
         close_returns = []
@@ -236,4 +247,23 @@ if __name__ == "__main__":
         fit_linear(close_returns,intMsgBSI[1:])
         
         print("Fit close_returns-aftMsgBSI:")
-        fit_linear(close_returns,aftMsgBSI[1:])'''
+        fit_linear(close_returns,aftMsgBSI[1:])
+        
+        frac_data = pd.read_csv(Fama_French_File,sep='\t')
+        #print(frac_data)
+        frac_data = frac_data[frac_data['MarkettypeID'] == 'P9709'].sort_values(by='TradingDate')
+        frac_data.index = frac_data['TradingDate']
+        RMRf = frac_data['RiskPremium1'].loc[stock_date[2:]]
+        SMB = frac_data['SMB1'].loc[stock_date[2:]]
+        HML = frac_data['HML1'].loc[stock_date[2:]]
+        
+        print(len(close_returns))
+        print(len(RMRf))
+        print("Fit close_returns-fama:")
+        fit_linear(close_returns,RMRf,SMB,HML)
+        print("Fit close_returns-fama-preMsgBSI:")
+        fit_linear(close_returns,RMRf,SMB,HML,preMsgBSI[1:])
+        print("Fit close_returns-fama-preallMsgBSI:")
+        fit_linear(close_returns,RMRf,SMB,HML,preallMsgBSI[1:])
+        print("Fit close_returns-fama-intMsgBSI:")
+        fit_linear(close_returns,RMRf,SMB,HML,intMsgBSI[1:])
