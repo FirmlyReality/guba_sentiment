@@ -36,11 +36,6 @@ if __name__ == "__main__":
     close_returns = []
     for i in range(1,len(monthp.close)):
         close_returns.append(math.log(stock_close[i] / stock_close[i-1]))
-    
-    new_data = pd.DataFrame()
-    new_data['HS300_returns'] = close_returns
-    #new_data['date'] = groupdata.index
-    new_data.to_csv('month_HS300_returns.csv',index=False)
         
     #print(close_returns)
     gdata = pd.read_csv("gdata.csv")
@@ -50,18 +45,21 @@ if __name__ == "__main__":
     lniv = []
     lnm1 = []
     lngdp = []
+    lnm2 = []
     
     lndglobal = []
     for i in gdata.index:
         d = gdata.loc[i]
         lncpi.append(math.log(d['cpi']/100))
-        lniv.append(math.log(d['iv']/100.0+1))
+        lniv.append(math.log(d['iv']))
         if i == 0:
             lnm1.append(math.log(d['M1']/348056.41))
             lngdp.append(math.log(d['gdp']/145670.5496))
+            lnm2.append(math.log(d['M2']/1228374.81))
         else:
             lnm1.append(math.log(d['M1']/gdata.loc[i-1]['M1']))
             lngdp.append(math.log(d['gdp']/gdata.loc[i-1]['gdp']))
+            lnm2.append(math.log(d['M2']/gdata.loc[i-1]['M2']))
     
     globals = list(gdata['global'].dropna())
     lndglobal = [globals[i] - globals[i-1] for i in range(1,len(globals))]
@@ -75,7 +73,8 @@ if __name__ == "__main__":
     groupdata = ratedata.groupby(lambda x:ratedata.loc[x]['date'][:7]).mean()
     print(groupdata)
     rates = groupdata['rate7']
-    rates_country = groupdata['rate_country']
+    rates_country = np.array(groupdata['rate_country10']) - np.array(groupdata['rate_country1'])
+    print(rates_country)
     lnrates = []
     lnr_country = []
     for i in range(len(rates)):
@@ -84,12 +83,18 @@ if __name__ == "__main__":
             lnr_country.append(0)
         else:'''
         lnrates.append(math.log(rates[i]))
-        lnr_country.append(math.log(rates_country[i]))
+        #lnr_country.append(math.log(rates_country[i]))
     #exit(0)
     
+    exsdata = pd.read_csv("exchanges.csv")
+    exsdata.index = exsdata['date']
+    groupdata = exsdata.groupby(lambda x:exsdata.loc[x]['date'][:7]).mean()
+    exchanges = np.array(groupdata['exs'])
+    
     data = pd.read_csv(BSI_file)
+    data['all'] = [data.loc[i]['preMsgBSI'] + data.loc[i]['intMsgBSI'] for i in data.index]
     data.index = data['date']
-    groupdata = data.groupby(lambda x:data.loc[x]['date'][:7]).max()
+    groupdata = data.groupby(lambda x:data.loc[x]['date'][:7]).mean()
     print(groupdata)
     preMsgBSIs = groupdata['preMsgBSI']
     intMsgBSIs = groupdata['intMsgBSI']
@@ -98,6 +103,16 @@ if __name__ == "__main__":
     aftallMsgBSIs = groupdata['aftallMsgBSI']
     preallArgS = groupdata['preallArgS']
     intArgS = groupdata['intArgS']
+    monthMsgBSIs = groupdata['all'] / 2
+    
+    new_data = pd.DataFrame()
+    new_data['HS300_returns'] = close_returns
+    new_data['MsgBSIs'] = list(monthMsgBSIs)
+    new_data['rates'] = list(rates)
+    new_data['rates_country'] = list(rates_country)
+    new_data['exs'] = list(exchanges)
+    #new_data['date'] = groupdata.index
+    new_data.to_csv('month_HS300_returns.csv',index=False)
     
     print("ADF test for close_returns:")
     print(tsa.adfuller(close_returns,regression="nc"))
@@ -110,11 +125,11 @@ if __name__ == "__main__":
     #print("ADF test for gdp:")
     #print(tsa.adfuller(gdp))
     
-    print("ADF test for dlngdp:")
-    print(tsa.adfuller(dlngdp,regression="ct"))
-    print(tsa.adfuller(dlngdp,regression="ctt"))
-    print(tsa.adfuller(dlngdp,regression="nc"))
-    print(tsa.adfuller(dlngdp))
+    print("ADF test for lngdp:")
+    print(tsa.adfuller(lngdp,regression="ct"))
+    print(tsa.adfuller(lngdp,regression="ctt"))
+    print(tsa.adfuller(lngdp,regression="nc"))
+    print(tsa.adfuller(lngdp))
     
     print("ADF test for lncpi:")
     print(tsa.adfuller(lncpi))
@@ -131,6 +146,12 @@ if __name__ == "__main__":
     print("ADF test for lnm1:")
     print(tsa.adfuller(lnm1))
     
+    print("ADF test for m2:")
+    print(tsa.adfuller(gdata['M2']))    
+    
+    print("ADF test for lnm2:")
+    print(tsa.adfuller(lnm2))
+    
     print("ADF test for rates:")
     print(tsa.adfuller(rates))
     
@@ -138,36 +159,52 @@ if __name__ == "__main__":
     print(tsa.adfuller(lnrates))
 
     print("ADF test for rates_country:")
+    print(tsa.adfuller(rates_country,regression="nc"))
     print(tsa.adfuller(rates_country))
     
-    print("ADF test for lnr_country:")
-    print(tsa.adfuller(lnr_country))    
+    #print("ADF test for lnr_country:")
+    #print(tsa.adfuller(lnr_country))
+
+    #print("ADF test for lnr_country:")
+    #print(tsa.adfuller(lnr_country))
+
+    print("ADF test for exchanges:")
+    print(tsa.adfuller(exchanges)) 
+    print(tsa.adfuller(exchanges,regression="nc"))
+    print(tsa.adfuller(exchanges,regression="ct"))    
     
     print("ADF test for preallMsgBSIs:")
     print(tsa.adfuller(preallMsgBSIs))
 
     print("ADF test for aftallMsgBSIs:")
-    print(tsa.adfuller(aftallMsgBSIs))      
+    print(tsa.adfuller(aftallMsgBSIs))
+
+    print("ADF test for monthMsgBSIs:")
+    print(tsa.adfuller(monthMsgBSIs))     
     
     #fit_linear(close_returns,lncpi)
     #fit_linear(close_returns[1:],lncpi[:-1])
     #fit_linear(close_returns,lniv)
     #fit_linear(close_returns[1:],lniv[1:])
-    fit_linear(close_returns[1:],lnm1[1:])
-    fit_linear(close_returns[1:],lnm1[:-1])
-    fit_linear(close_returns,rates)
-    fit_linear(close_returns[1:],rates[:-1])
-    #fit_linear(close_returns[1:],dlngdp)
+    #fit_linear(close_returns,lnm2)
+    #fit_linear(close_returns[1:],lnm2[:-1])
+    #fit_linear(close_returns[:-1],lnm2[1:])
+    fit_linear(close_returns,rates_country)
+    fit_linear(close_returns[1:],rates_country[:-1])
+    fit_linear(close_returns[:-1],rates_country[1:])
+    fit_linear(close_returns,lngdp)
+    fit_linear(close_returns[1:],lngdp[:-1])
+    fit_linear(close_returns[:-1],lngdp[1:])
     #fit_linear(close_returns[1:36],globals)
     fit_linear(close_returns,rates_country)
     fit_linear(close_returns[1:],rates_country[:-1])
     #fit_linear(close_returns[1:],lnrates[1:])
     #fit_linear(close_returns,lncpi,lniv,lnm1)
     #fit_linear(close_returns[1:],close_returns[:-1],preallMsgBSIs[1:],preallMsgBSIs[:-1])
-    fit_linear(close_returns,lniv,aftallMsgBSIs)
-    fit_linear(close_returns,lncpi,aftallMsgBSIs)
-    fit_linear(close_returns,lncpi,lniv,aftallMsgBSIs)
-    exit(0)
+    fit_linear(close_returns,monthMsgBSIs)
+    fit_linear(close_returns,lncpi,monthMsgBSIs)
+    fit_linear(close_returns,lniv,monthMsgBSIs)
+    fit_linear(close_returns,lncpi,lniv,monthMsgBSIs)
     #print(close_returns)
     #print(preallMsgBSIs)
     fit_linear(close_returns[1:],preallMsgBSIs[:-1])
@@ -178,7 +215,7 @@ if __name__ == "__main__":
     
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    plt.plot(preallMsgBSIs.index,aftallMsgBSIs,'b',alpha=0.9)
+    plt.plot(preallMsgBSIs.index,monthMsgBSIs,'b',alpha=0.9)
     plt.plot(preallMsgBSIs.index,close_returns,alpha=0.9)
     #plt.plot(preallMsgBSIs.index[1:],preallMsgBSIs[:-1],alpha=0.9)
     plt.show()

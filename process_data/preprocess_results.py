@@ -6,10 +6,10 @@ import time
 
 need_stocks = []
 data_dir = "../../../data"
-origin_dir = data_dir + "/filter_data1"
-results_dir = data_dir + "/results"
-output_dir = data_dir + "/sum_results"
-rp_results_dir = data_dir + "/rp_results"
+origin_dir = data_dir + "/g_filter_data1"
+results_dir = data_dir + "/g_tsv_results"
+output_dir = data_dir + "/g_sum_results"
+rp_results_dir = data_dir + "/g_rp_tsv"
 
 def get_time_data(sdata):
     #sdata = filter_data(data,stime,etime)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     print(need_stocks)
     need_stocks.remove('600832')
 
-    for code in need_stocks[453:]:
+    for code in ['399001','szzs']:#need_stocks[453:]:
         print("Read from %s..."%(code + "_tiezi.csv"))
         tiezidata = pd.read_csv(origin_dir+"/"+code + "_tiezi.csv",dtype=str)
         print("Read from %s..."%(code + "_reply.csv"))

@@ -73,7 +73,7 @@ if __name__ == "__main__":
         #print(stock_data)
         if len(stock_data) == 0:
             print("Code %s does not exist!!!" % code)
-            stock_data = stocks300
+        stock_data = stocks300
         stock_date = ['2015-01-01'] + list(stock_data.date)
         #print(stock_date)
         #fig = plt.figure()
@@ -249,7 +249,7 @@ if __name__ == "__main__":
         print("Fit close_returns-aftMsgBSI:")
         fit_linear(close_returns,aftMsgBSI[1:])
         
-        frac_data = pd.read_csv(Fama_French_File,sep='\t')
+        '''frac_data = pd.read_csv(Fama_French_File,sep='\t')
         #print(frac_data)
         frac_data = frac_data[frac_data['MarkettypeID'] == 'P9709'].sort_values(by='TradingDate')
         frac_data.index = frac_data['TradingDate']
@@ -266,4 +266,4 @@ if __name__ == "__main__":
         print("Fit close_returns-fama-preallMsgBSI:")
         fit_linear(close_returns,RMRf,SMB,HML,preallMsgBSI[1:])
         print("Fit close_returns-fama-intMsgBSI:")
-        fit_linear(close_returns,RMRf,SMB,HML,intMsgBSI[1:])
+        fit_linear(close_returns,RMRf,SMB,HML,intMsgBSI[1:])'''
