@@ -5,7 +5,7 @@ import numpy as np
 import math
 
 input_dir = "../res_data1"
-change_freq = 10
+change_freq = 120
 computedays = 915
 
 def find_idx(nums,val):
@@ -19,10 +19,7 @@ def find_idx(nums,val):
 if __name__ == "__main__":
 
     ret_data = pd.read_csv(input_dir+"/CSMAR_stock_ret.csv",dtype={"Stkcd":str})
-
-    ts.set_token('54fb12ea71fa89da0470b68769d417df44df150e981284bec7c42c89')
     
-    tspro = ts.pro_api()
     stocks300 = ts.get_k_data('000300', index=True,start="2015-01-01",end="2018-10-01")
     date_300 = list(stocks300.date)
     ret_data = ret_data[ret_data['Trdsta']==1]
@@ -82,21 +79,29 @@ if __name__ == "__main__":
 
         print(factors_groups.mean())
         print(st_groups.mean())
+        #print(ret_d)
         
         fg = {}
         for g_name, st_g in factors_groups:
-            retdata = ret_d.loc[st_g.index]
+            #print(st_g)
+            retdata = ret_d.loc[list(st_g.index)]
+            
             #print(retdata[retdata['Dsmvosd'].isna()].index)
             retdata = retdata.dropna()
+            #print(retdata)
+            #print(g_name)
             sizes = np.array(retdata['Dsmvosd'])
             w = sizes / sum(sizes)
             ret = np.array(retdata['Dretwd'])
             gret = np.sum(w*ret)
             fg[g_name] = gret
+            #print(gret)
+            #input()
         print(fg)
         smb = 1/3*(fg['S1BM1']+fg['S1BM2'] + fg['S1BM3']) - 1/3 * (fg['S2BM1']+fg['S2BM2']+fg['S2BM3'])
         SMB.append(smb)
         hml = 1/2*(fg['S1BM3']+fg['S2BM3']) - 1/2*(fg['S1BM1']+fg['S2BM1'])
+        print(hml)
         HML.append(hml)
             
         mkt_w = np.array(ret_d['Dsmvosd']) / sum(np.array(ret_d['Dsmvosd']))
@@ -105,7 +110,7 @@ if __name__ == "__main__":
         for g_name, st_g in st_groups:
             #print(g_name)
             #print(st_g)
-            retdata = ret_d.loc[st_g.index]
+            retdata = ret_d.loc[list(st_g.index)]
             #print(retdata[retdata['Dsmvosd'].isna()].index)
             retdata = retdata.dropna()
             sizes = np.array(retdata['Dsmvosd'])
@@ -126,13 +131,15 @@ if __name__ == "__main__":
                 st_basics = pd.concat([st_basics,st_b_date],ignore_index=True)
             last_date = []
             group_basics = st_basics.groupby(by=['ts_code'])
-            st_basics = group_basics.mean()
+            st_basics = group_basics.tail(1)
+            st_basics.index = st_basics['ts_code']
             
             size_pers = np.percentile(st_basics['circ_mv'],[50])
             bm_pers = np.percentile(st_basics['BM'],[33.3,66.7])
             
             def ngroups(i):
                 d = st_basics.loc[i]
+                #print(d)
                 i1 = find_idx(size_pers,d['circ_mv'])
                 i2 = find_idx(bm_pers,d['BM'])
                 return 'S'+ str(i1+1) + "BM" + str(i2+1)
@@ -152,11 +159,11 @@ if __name__ == "__main__":
     fama_factors['SMB'] = SMB
     fama_factors['HML'] = HML
     fama_factors['rft'] = Rft[1:computedays]
-    fama_factors.to_csv('2fama_factors.csv',index=False)
+    fama_factors.to_csv('2fama_factors120.csv',index=False)
     
     #print(st_group_ret)
     group_ret_data = pd.DataFrame()
     group_ret_data['date'] = date_300[1:computedays]
     for k in st_group_ret.keys():
         group_ret_data['ret_'+k] = st_group_ret[k]
-    group_ret_data.to_csv('2stocks_group_ret.csv',index=False)
+    group_ret_data.to_csv('2stocks_group_ret120.csv',index=False)

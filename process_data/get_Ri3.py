@@ -6,13 +6,13 @@ import math
 import statsmodels.api as sm
 
 input_dir = "../res_data1"
-change_freq = 10
+change_freq = 30
 startdays = 60
 enddays = 915
 windowsize = startdays
-sizegroups = 3
+sizegroups = 5
 bmgroups = 5
-sentgroups = 5
+sentgroups = 1
 
 def find_idx(nums,val):
     idx = 0
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     stocks_basics = stocks_basics.set_index(['trade_date','ts_code'])
     BSI_data = pd.read_csv("../res_data1/HS300_MsgBSI.csv")
     gBSI_data = pd.read_csv("../res_data1/g_MsgBSI.csv")
-    fBSI = 0.8*BSI_data['intMsgBSI'] + 0.2*gBSI_data['g_intMsgBSI']
+    fBSI = 0.8*BSI_data['preallMsgBSI'] + 0.2*gBSI_data['g_preallMsgBSI']
     #print(stocks_basics)
     print(fBSI)
     
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     print(st_basics_cnt)
     betas = []
     for code in st_basics_cnt.index:
-        try:
+        '''try:
             st_ret = ret_data.loc[code]
             st_ret = st_ret.loc[init_dates].dropna()
         except Exception as err:
@@ -83,7 +83,8 @@ if __name__ == "__main__":
         factors = fama_factors.loc[ret_dates]
         #print(code)
         res = fit_linear(st_ret,factors)
-        betas.append(res.params[-1])        
+        betas.append(res.params[-1])'''
+        betas.append(1)
     
     #exit(0)
     st_basics = st_basics.groupby(by=['ts_code']).mean()
@@ -124,7 +125,7 @@ if __name__ == "__main__":
         window_dates = window_dates[1:] + [date.strftime("%Y%m%d")]
 
         print(factors_groups.mean())
-        print(st_groups.size())
+        print(st_groups.mean())
         
         fg = {}
         for g_name, st_g in factors_groups:
@@ -136,6 +137,7 @@ if __name__ == "__main__":
             ret = np.array(retdata['Dretwd'])
             gret = np.sum(w*ret)
             fg[g_name] = gret
+            print(gret)
         print(fg)
         fama_d = fama_factors.loc[date_str]
         smb = 1/3*(fg['S1BM1E1']+fg['S1BM2E1'] + fg['S1BM3E1']) - 1/3 * (fg['S2BM1E1']+fg['S2BM2E1']+fg['S2BM3E1'])
@@ -174,7 +176,7 @@ if __name__ == "__main__":
             #print(st_basics_cnt)
             betas = []
             for code in st_basics_cnt.index:
-                try:
+                '''try:
                     st_ret = ret_data.loc[code]
                     date_idx = date_300.index(date_str)
                     st_ret = st_ret.loc[date_300[date_idx-windowsize+1:date_idx+1]].dropna()
@@ -190,7 +192,8 @@ if __name__ == "__main__":
                 factors = fama_factors.loc[ret_dates]
                 #print(code)
                 res = fit_linear(st_ret,factors)
-                betas.append(res.params[-1])          
+                betas.append(res.params[-1])'''
+                betas.append(1)
             st_basics['Beta'] = betas
             st_basics = st_basics.dropna()            
             
@@ -219,11 +222,12 @@ if __name__ == "__main__":
 
     fama_factors = fama_factors[startdays:enddays]
     fama_factors['date'] = date_300[startdays:enddays]
-    fama_factors.to_csv('3fama_factors3.csv',index=False)
+    fama_factors.to_csv('3fama_factors551_30.csv',index=False)
     
     #print(st_group_ret)
     group_ret_data = pd.DataFrame()
     #group_ret_data['date'] = date_300[startdays:enddays]
     for k in st_group_ret.keys():
+        print(len(st_group_ret[k]))
         group_ret_data['ret_'+k] = st_group_ret[k]
-    group_ret_data.to_csv('3stocks_group_ret3.csv',index=False)
+    group_ret_data.to_csv('3stocks_group_ret551_30.csv',index=False)
