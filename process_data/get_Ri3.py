@@ -10,6 +10,7 @@ change_freq = 30
 startdays = 60
 enddays = 915
 windowsize = startdays
+mktgroups = 5
 sizegroups = 5
 bmgroups = 5
 sentgroups = 1
@@ -28,6 +29,25 @@ def fit_linear(y,X):
     mod = sm.OLS(y,X)
     res = mod.fit()
     return res
+    
+def return_betas(ret_data,st_basics_stg,fama_factors,reg_dates,windowsize):
+    betas = []
+    for code in st_basics_stg.index:
+        try:
+            st_ret = ret_data.loc[code]
+            st_ret = st_ret.loc[reg_dates].dropna()
+        except Exception as err:
+            betas.append([None]*5)
+            continue
+        if len(st_ret) <= 20:
+            betas.append([None]*5)
+            continue
+        ret_dates = st_ret.index
+        st_ret = st_ret['Dretwd']
+        factors = fama_factors.loc[ret_dates]
+        res = fit_linear(st_ret,factors)
+        betas.append(list(res.params))
+    return betas
 
 if __name__ == "__main__":
 
@@ -40,7 +60,7 @@ if __name__ == "__main__":
     ret_data2 = ret_data.set_index(['Trddt','Stkcd'])
     ret_data = ret_data.set_index(['Stkcd','Trddt'])
     stocks_basics = pd.read_csv("stocks_basics.csv",dtype={"ts_code":str,"trade_date":str})
-    stocks_basics = stocks_basics.set_index(['trade_date','ts_code'])
+    stocks_basics = stocks_basics.set_index(['trade_date'])
     BSI_data = pd.read_csv("../res_data1/HS300_MsgBSI.csv")
     gBSI_data = pd.read_csv("../res_data1/g_MsgBSI.csv")
     fBSI = 0.8*BSI_data['preallMsgBSI'] + 0.2*gBSI_data['g_preallMsgBSI']
@@ -48,12 +68,13 @@ if __name__ == "__main__":
     print(fBSI)
     
     st_group_ret = {}
-    for i in range(1,sizegroups+1):
-        for j in range(1,bmgroups+1):
-            for k in range(1,sentgroups+1):
-                st_group_ret['S'+str(i)+'BM'+str(j)+'E'+str(k)] = []
+    for i0 in range(1,mktgroups+1):
+        for i in range(1,sizegroups+1):
+            for j in range(1,bmgroups+1):
+                for k in range(1,sentgroups+1):
+                    st_group_ret['M'+str(i0)+'S'+str(i)+'BM'+str(j)+'E'+str(k)] = []
             
-    fama_factors = pd.read_csv("2fama_factors10.csv")[["date","MktRet","SMB","HML"]]
+    fama_factors = pd.read_csv("2fama_factors120.csv")[["date","MktRet","SMB","HML"]]
     fama_factors['BSI'] = fBSI
     fama_factors = fama_factors.set_index(['date'])
     window_dates = []
@@ -62,53 +83,43 @@ if __name__ == "__main__":
         sdate = datetime.strptime(sdate_str,"%Y-%m-%d").strftime("%Y%m%d")
         window_dates.append(sdate)
     st_basics = stocks_basics.loc[window_dates]
-
-    st_basics_groups = st_basics.groupby(by=['ts_code'])
-    st_basics_cnt = st_basics_groups.size()
-    print(st_basics_cnt)
-    betas = []
-    for code in st_basics_cnt.index:
-        '''try:
-            st_ret = ret_data.loc[code]
-            st_ret = st_ret.loc[init_dates].dropna()
-        except Exception as err:
-            #print(err)
-            betas.append(None)
-            continue
-        if len(st_ret) <= windowsize/2:
-            betas.append(None)
-            continue
-        ret_dates = st_ret.index
-        st_ret = st_ret['Dretwd']
-        factors = fama_factors.loc[ret_dates]
-        #print(code)
-        res = fit_linear(st_ret,factors)
-        betas.append(res.params[-1])'''
-        betas.append(1)
+    print(st_basics)
+    #input()
     
-    #exit(0)
-    st_basics = st_basics.groupby(by=['ts_code']).mean()
-    st_basics['Beta'] = betas
+    st_basics = st_basics.groupby(by=['ts_code']).tail(1)
+    print(st_basics)
+    #input()
+    st_basics.index = list(st_basics['ts_code'])
+    betas = return_betas(ret_data,st_basics,fama_factors,init_dates,windowsize)
+    print(betas)
+    st_basics['MktBeta'] = [b[1] for b in betas]
+    st_basics['SBeta'] = [b[4] for b in betas]
+    print(st_basics)
     st_basics = st_basics.dropna()
+    print(st_basics)
+    #input()
             
     size_pers = np.percentile(st_basics['circ_mv'],[50])
     bm_pers = np.percentile(st_basics['BM'],[33.3,66.7])
-    betas_pers = np.percentile(st_basics['Beta'],[100])
-    print(st_basics['Beta'])
-    print(betas_pers)
+    mkt_pers = np.percentile(st_basics['MktBeta'],[100])
+    sent_pers = np.percentile(st_basics['SBeta'],[100])
+    #print(st_basics['Beta'])
+    #print(betas_pers)
             
     def ngroups(i):
         d = st_basics.loc[i]
+        i0 = find_idx(mkt_pers,d['MktBeta'])
         i1 = find_idx(size_pers,d['circ_mv'])
         i2 = find_idx(bm_pers,d['BM'])
-        i3 = find_idx(betas_pers,d['Beta'])
-        return 'S'+ str(i1+1) + "BM" + str(i2+1) + "E" + str(i3+1)
+        i3 = find_idx(sent_pers,d['SBeta'])
+        return 'M'+str(i0+1)+'S'+ str(i1+1) + "BM" + str(i2+1) + "E" + str(i3+1)
                 
     factors_groups = st_basics.groupby(by=ngroups)
-            
+    
+    mkt_pers = np.percentile(st_basics['MktBeta'],[100/mktgroups*i for i in range(1,mktgroups)])    
     size_pers = np.percentile(st_basics['circ_mv'],[100/sizegroups*i for i in range(1,sizegroups)])
     bm_pers = np.percentile(st_basics['BM'],[100/bmgroups*i for i in range(1,bmgroups)])
-    betas_pers = np.percentile(st_basics['Beta'],[100/sentgroups*i for i in range(1,sentgroups)])
+    sent_pers = np.percentile(st_basics['SBeta'],[100/sentgroups*i for i in range(1,sentgroups)])
         
     st_groups = st_basics.groupby(by=ngroups)
            
@@ -140,25 +151,32 @@ if __name__ == "__main__":
             print(gret)
         print(fg)
         fama_d = fama_factors.loc[date_str]
-        smb = 1/3*(fg['S1BM1E1']+fg['S1BM2E1'] + fg['S1BM3E1']) - 1/3 * (fg['S2BM1E1']+fg['S2BM2E1']+fg['S2BM3E1'])
+        smb = 1/3*(fg['M1S1BM1E1']+fg['M1S1BM2E1'] + fg['M1S1BM3E1']) - 1/3 * (fg['M1S2BM1E1']+fg['M1S2BM2E1']+fg['M1S2BM3E1'])
         fama_d['SMB'] = smb
-        hml = 1/2*(fg['S1BM3E1']+fg['S2BM3E1']) - 1/2*(fg['S1BM1E1']+fg['S2BM1E1'])
+        hml = 1/2*(fg['M1S1BM3E1']+fg['M1S2BM3E1']) - 1/2*(fg['M1S1BM1E1']+fg['M1S2BM1E1'])
         fama_d['HML'] = hml
         
         mkt_w = np.array(ret_d['Dsmvosd']) / sum(np.array(ret_d['Dsmvosd']))
         fama_d['MktRet'] = np.sum(mkt_w * np.array(ret_d['Dretwd']))
-
+        
+        has_set = set()
         for g_name, st_g in st_groups:
-            #print(g_name)
-            #print(st_g)
-            retdata = ret_d.loc[st_g.index]
-            #print(retdata[retdata['Dsmvosd'].isna()].index)
+            has_set.add(g_name)
+            try:
+                retdata = ret_d.loc[st_g.index]
+            except Exception as err:
+                print(err)
+                st_group_ret[g_name].append(0.0)
+                continue
             retdata = retdata.dropna()
             sizes = np.array(retdata['Dsmvosd'])
             w = sizes / sum(sizes)
             ret = np.array(retdata['Dretwd'])
             gret = np.sum(w*ret)
             st_group_ret[g_name].append(gret)
+        has_set = set(st_group_ret.keys()) - has_set
+        for g_name in has_set:
+            st_group_ret[g_name].append(0)
         
         ch_day += 1
         cnt_days += 1
@@ -169,60 +187,45 @@ if __name__ == "__main__":
            
             st_basics = stocks_basics.loc[window_dates]
             group_basics = st_basics.groupby(by=['ts_code'])
-            st_basics = group_basics.mean()
+            st_basics = group_basics.tail(1)
+            st_basics.index = list(st_basics['ts_code'])
             
-            st_basics_groups = st_basics.groupby(by=['ts_code'])
-            st_basics_cnt = st_basics_groups.size()
-            #print(st_basics_cnt)
-            betas = []
-            for code in st_basics_cnt.index:
-                '''try:
-                    st_ret = ret_data.loc[code]
-                    date_idx = date_300.index(date_str)
-                    st_ret = st_ret.loc[date_300[date_idx-windowsize+1:date_idx+1]].dropna()
-                except Exception as err:
-                    #print(err)
-                    betas.append(None)
-                    continue
-                if len(st_ret) <= windowsize/2:
-                    betas.append(None)
-                    continue
-                ret_dates = st_ret.index
-                st_ret = st_ret['Dretwd']
-                factors = fama_factors.loc[ret_dates]
-                #print(code)
-                res = fit_linear(st_ret,factors)
-                betas.append(res.params[-1])'''
-                betas.append(1)
-            st_basics['Beta'] = betas
-            st_basics = st_basics.dropna()            
+            date_idx = date_300.index(date_str)
+            betas = return_betas(ret_data,st_basics,fama_factors,date_300[date_idx-windowsize+1:date_idx+1],windowsize)
+            st_basics['MktBeta'] = [b[1] for b in betas]
+            st_basics['SBeta'] = [b[4] for b in betas]
+            print(st_basics)
+            st_basics = st_basics.dropna()
+            print(st_basics)
+            #input()         
             
             size_pers = np.percentile(st_basics['circ_mv'],[50])
             bm_pers = np.percentile(st_basics['BM'],[33.3,66.7])
-            #sprint(st_basics)
-            betas_pers = np.percentile(st_basics['Beta'],[100])
+            mkt_pers = np.percentile(st_basics['MktBeta'],[100])
+            sent_pers = np.percentile(st_basics['SBeta'],[100])
+            #print(st_basics['Beta'])
             #print(betas_pers)
-            
+                    
             def ngroups(i):
                 d = st_basics.loc[i]
+                i0 = find_idx(mkt_pers,d['MktBeta'])
                 i1 = find_idx(size_pers,d['circ_mv'])
                 i2 = find_idx(bm_pers,d['BM'])
-                i3 = find_idx(betas_pers,d['Beta'])
-                return 'S'+ str(i1+1) + "BM" + str(i2+1) + "E" + str(i3+1)
-                
+                i3 = find_idx(sent_pers,d['SBeta'])
+                return 'M'+str(i0+1)+'S'+ str(i1+1) + "BM" + str(i2+1) + "E" + str(i3+1)
+                        
             factors_groups = st_basics.groupby(by=ngroups)
             
+            mkt_pers = np.percentile(st_basics['MktBeta'],[100/mktgroups*i for i in range(1,mktgroups)])    
             size_pers = np.percentile(st_basics['circ_mv'],[100/sizegroups*i for i in range(1,sizegroups)])
             bm_pers = np.percentile(st_basics['BM'],[100/bmgroups*i for i in range(1,bmgroups)])
-            betas_pers = np.percentile(st_basics['Beta'],[100/sentgroups*i for i in range(1,sentgroups)])
-            #print(size_pers)
-            #print(bm_pers)
-        
+            sent_pers = np.percentile(st_basics['SBeta'],[100/sentgroups*i for i in range(1,sentgroups)])
+                
             st_groups = st_basics.groupby(by=ngroups)
 
     fama_factors = fama_factors[startdays:enddays]
     fama_factors['date'] = date_300[startdays:enddays]
-    fama_factors.to_csv('3fama_factors551_30.csv',index=False)
+    fama_factors.to_csv('3fama_factors5551_60.csv',index=False)
     
     #print(st_group_ret)
     group_ret_data = pd.DataFrame()
@@ -230,4 +233,4 @@ if __name__ == "__main__":
     for k in st_group_ret.keys():
         print(len(st_group_ret[k]))
         group_ret_data['ret_'+k] = st_group_ret[k]
-    group_ret_data.to_csv('3stocks_group_ret551_30.csv',index=False)
+    group_ret_data.to_csv('3stocks_group_ret5551_60.csv',index=False)

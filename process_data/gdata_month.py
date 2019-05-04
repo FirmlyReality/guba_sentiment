@@ -6,7 +6,8 @@ import tushare as ts
 import pandas as pd
 import math
 
-BSI_file = "HS300_MsgBSI.csv"
+data_dir = "../res_data1/"
+BSI_file = data_dir + "HS300_MsgBSI.csv"
 
 def fit_linear(y,*X):
     Xs = []
@@ -38,7 +39,7 @@ if __name__ == "__main__":
         close_returns.append(math.log(stock_close[i] / stock_close[i-1]))
         
     #print(close_returns)
-    gdata = pd.read_csv("gdata.csv")
+    gdata = pd.read_csv(data_dir+"gdata.csv")
     #print(gdata)
         
     lncpi = []
@@ -68,53 +69,71 @@ if __name__ == "__main__":
     #print(lniv)
     #print(lnm1)
     
-    ratedata = pd.read_csv("bank_rate.csv")
+    ratedata = pd.read_csv(data_dir+"bank_rate.csv")
     ratedata.index = ratedata['date']
     groupdata = ratedata.groupby(lambda x:ratedata.loc[x]['date'][:7]).mean()
     print(groupdata)
     rates = groupdata['rate7']
     rates_country = np.array(groupdata['rate_country10']) - np.array(groupdata['rate_country1'])
     print(rates_country)
-    lnrates = []
+    '''lnrates = []
     lnr_country = []
     for i in range(len(rates)):
-        '''if i == 0:
+        if i == 0:
             lnrates.append(0)
             lnr_country.append(0)
-        else:'''
+        else:
         lnrates.append(math.log(rates[i]))
         #lnr_country.append(math.log(rates_country[i]))
-    #exit(0)
+    #exit(0)'''
     
-    exsdata = pd.read_csv("exchanges.csv")
+    exsdata = pd.read_csv(data_dir+"exchanges.csv")
     exsdata.index = exsdata['date']
     groupdata = exsdata.groupby(lambda x:exsdata.loc[x]['date'][:7]).mean()
     exchanges = np.array(groupdata['exs'])
     
-    data = pd.read_csv(BSI_file)
+    data = pd.read_csv(data_dir+BSI_file)
     data['all'] = [data.loc[i]['preMsgBSI'] + data.loc[i]['intMsgBSI'] for i in data.index]
     data.index = data['date']
     groupdata = data.groupby(lambda x:data.loc[x]['date'][:7]).mean()
     print(groupdata)
-    preMsgBSIs = groupdata['preMsgBSI']
+    '''preMsgBSIs = groupdata['preMsgBSI']
     intMsgBSIs = groupdata['intMsgBSI']
     aftMsgBSIs = groupdata['aftMsgBSI']
     preallMsgBSIs = groupdata['preallMsgBSI']
     aftallMsgBSIs = groupdata['aftallMsgBSI']
     preallArgS = groupdata['preallArgS']
-    intArgS = groupdata['intArgS']
+    intArgS = groupdata['intArgS']'''
     monthMsgBSIs = groupdata['all'] / 2
+    
+    data = pd.read_csv(data_dir+"g_MsgBSI.csv")
+    data['all'] = [data.loc[i]['g_preMsgBSI'] + data.loc[i]['g_intMsgBSI'] for i in data.index]
+    data.index = data['date']
+    groupdata = data.groupby(lambda x:data.loc[x]['date'][:7]).mean()
+    print(groupdata)
+    g_monthMsgBSIs = groupdata['all'] / 2
+    
+    bdata = pd.read_csv(data_dir+"HS300_mv_pb_pe.csv",dtype={"ts_code":str,"trade_date":str})
+    bdata.index = bdata['trade_date']
+    print(bdata.index)
+    groupdata = bdata.groupby(lambda x:bdata.loc[x]['trade_date'][:6]).mean()
+    print(groupdata)
     
     new_data = pd.DataFrame()
     new_data['HS300_returns'] = close_returns
     new_data['MsgBSIs'] = list(monthMsgBSIs)
+    new_data['g_MsgBSIs'] = list(g_monthMsgBSIs)
     new_data['rates'] = list(rates)
     new_data['rates_country'] = list(rates_country)
     new_data['exs'] = list(exchanges)
+    new_data['total_mv'] = list(groupdata['total_mv'])
+    new_data['float_mv'] = list(groupdata['float_mv'])
+    new_data['B/M'] = list(1.0/groupdata['pb'])
+    new_data['pe'] = list(groupdata['pe'])
     #new_data['date'] = groupdata.index
-    new_data.to_csv('month_HS300_returns.csv',index=False)
+    new_data.to_csv(data_dir+'monthdata_Ret_BSI.csv',index=False)
     
-    print("ADF test for close_returns:")
+    '''print("ADF test for close_returns:")
     print(tsa.adfuller(close_returns,regression="nc"))
     
     print("ADF test for global:")
@@ -218,4 +237,4 @@ if __name__ == "__main__":
     plt.plot(preallMsgBSIs.index,monthMsgBSIs,'b',alpha=0.9)
     plt.plot(preallMsgBSIs.index,close_returns,alpha=0.9)
     #plt.plot(preallMsgBSIs.index[1:],preallMsgBSIs[:-1],alpha=0.9)
-    plt.show()
+    plt.show()'''

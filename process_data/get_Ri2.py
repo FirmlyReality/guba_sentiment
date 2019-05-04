@@ -7,6 +7,8 @@ import math
 input_dir = "../res_data1"
 change_freq = 120
 computedays = 915
+sizegroups = 5
+bmgroups = 5
 
 def find_idx(nums,val):
     idx = 0
@@ -21,8 +23,8 @@ if __name__ == "__main__":
     ret_data = pd.read_csv(input_dir+"/CSMAR_stock_ret.csv",dtype={"Stkcd":str})
     
     stocks300 = ts.get_k_data('000300', index=True,start="2015-01-01",end="2018-10-01")
-    date_300 = list(stocks300.date)
-    ret_data = ret_data[ret_data['Trdsta']==1]
+    date_300 = list(stocks300.date)[300:]
+    #ret_data = ret_data[ret_data['Trdsta']==1]
     ret_data = ret_data[(ret_data['Markettype']==1)|(ret_data['Markettype']==4)]
     stocks_basics = pd.read_csv("stocks_basics.csv",dtype={"ts_code":str,"trade_date":str})
     print(stocks_basics)
@@ -34,12 +36,12 @@ if __name__ == "__main__":
         if last_i < len(Rft_list)-1 and date >= Rft_list[last_i+1][0]:
             last_i += 1
         r = Rft_list[last_i][1]/100
-        rr = (r+1)**(1/90)-1
+        rr = (r+1)**(1/365)-1
         Rft.append(rr)
     
     st_group_ret = {}
-    for i in range(1,6):
-        for j in range(1,6):
+    for i in range(1,sizegroups+1):
+        for j in range(1,bmgroups+1):
             st_group_ret['S'+str(i)+'BM'+str(j)] = []
     
     first_date = datetime.strptime(date_300[0],"%Y-%m-%d")
@@ -57,8 +59,8 @@ if __name__ == "__main__":
                 
     factors_groups = st_basics.groupby(by=ngroups)
             
-    size_pers = np.percentile(st_basics['circ_mv'],[20,40,60,80])
-    bm_pers = np.percentile(st_basics['BM'],[20,40,60,80])
+    size_pers = np.percentile(st_basics['circ_mv'],[100/sizegroups*i for i in range(1,sizegroups)])
+    bm_pers = np.percentile(st_basics['BM'],[100/bmgroups*i for i in range(1,bmgroups)])
         
     st_groups = st_basics.groupby(by=ngroups)
             
@@ -68,12 +70,18 @@ if __name__ == "__main__":
     
     ch_day = 0
     last_date = []
-    last_close = None
+    #last_close = None
+    #isChanged = False
     for date_str in date_300[1:computedays]:
         print(date_str)
         date = datetime.strptime(date_str,"%Y-%m-%d")
+        date_idx = date_300.index(date_str) + 1
+        if date_idx < len(date_300):
+            next_date = datetime.strptime(date_300[date_idx],"%Y-%m-%d")
+        #if date.month == 8:
+            #isChanged = False
         ret_d = ret_data[ret_data['Trddt']==date_str]
-        #ret_data = ret_data[ret_data['Trdsta']==1]
+        ret_data = ret_data[ret_data['Trdsta']==1]
         ret_d.index = list(ret_d['Stkcd'])
         last_date.append(date.strftime("%Y%m%d"))
 
@@ -105,12 +113,19 @@ if __name__ == "__main__":
         HML.append(hml)
             
         mkt_w = np.array(ret_d['Dsmvosd']) / sum(np.array(ret_d['Dsmvosd']))
+        print(len(ret_d['Dsmvosd']))
+        #input()
         mkt_ret.append(np.sum(mkt_w * np.array(ret_d['Dretwd'])))
 
         for g_name, st_g in st_groups:
             #print(g_name)
             #print(st_g)
-            retdata = ret_d.loc[list(st_g.index)]
+            try:
+                retdata = ret_d.loc[list(st_g.index)]
+            except Exception as err:
+                print(err)
+                st_group_ret[g_name].append(0.0)
+                continue
             #print(retdata[retdata['Dsmvosd'].isna()].index)
             retdata = retdata.dropna()
             sizes = np.array(retdata['Dsmvosd'])
@@ -121,7 +136,8 @@ if __name__ == "__main__":
         
         ch_day += 1
         
-        if ch_day == change_freq:
+        if ch_day == change_freq:#date.month == 6 and next_date.month == 7:#ch_day == change_freq:##not isChanged and date.month == 7:
+            #isChanged = True
             ch_day = 0
             print("Change groups")
            
@@ -146,8 +162,8 @@ if __name__ == "__main__":
                 
             factors_groups = st_basics.groupby(by=ngroups)
             
-            size_pers = np.percentile(st_basics['circ_mv'],[20,40,60,80])
-            bm_pers = np.percentile(st_basics['BM'],[20,40,60,80])
+            size_pers = np.percentile(st_basics['circ_mv'],[100/sizegroups*i for i in range(1,sizegroups)])
+            bm_pers = np.percentile(st_basics['BM'],[100/bmgroups*i for i in range(1,bmgroups)])
             #print(size_pers)
             #print(bm_pers)
         
@@ -158,12 +174,12 @@ if __name__ == "__main__":
     fama_factors['MktRet'] = mkt_ret
     fama_factors['SMB'] = SMB
     fama_factors['HML'] = HML
-    fama_factors['rft'] = Rft[1:computedays]
-    fama_factors.to_csv('2fama_factors120.csv',index=False)
+    #fama_factors['rft'] = Rft[1:computedays]
+    fama_factors.to_csv('2fama_factors55_120_3.csv',index=False)
     
     #print(st_group_ret)
     group_ret_data = pd.DataFrame()
     group_ret_data['date'] = date_300[1:computedays]
     for k in st_group_ret.keys():
         group_ret_data['ret_'+k] = st_group_ret[k]
-    group_ret_data.to_csv('2stocks_group_ret120.csv',index=False)
+    group_ret_data.to_csv('2stocks_group_ret55_120_3.csv',index=False)

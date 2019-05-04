@@ -139,7 +139,7 @@ if __name__ == "__main__":
     res_data['aftallArgS'] = aftallArgS
     res_data.to_csv("HS300_MsgBSI.csv",index=False)
     
-    stock_open = list(stocks300.open)
+    '''stock_open = list(stocks300.open)
     stock_close = list(stocks300.close)
         
     close_returns = []
@@ -214,6 +214,6 @@ if __name__ == "__main__":
     fit_linear(close_returns,intMsgBSIs[1:])
         
     print("Fit close_returns-aftMsgBSI:")
-    fit_linear(close_returns,aftMsgBSIs[1:])
+    fit_linear(close_returns,aftMsgBSIs[1:])'''
     
     
